@@ -202,7 +202,7 @@ A PLL (Phased locked loop) is a control system that generates a stable, high-fre
 Here **8x-PLL** means it uses a frequency divider of 8, thus generating a clock 8 times faster. 
 
 <p align="center">
-  <img width="327" height="146" alt="image" src="https://github.com/user-attachments/assets/5c038b8f-2774-4fa8-9aec-3761e83df356" />
+  <img width="612" height="307" alt="image" src="https://github.com/user-attachments/assets/4cc60d55-f2fd-45e4-ab90-6eb5e6e7c9d6" />
 </p>
 
 
@@ -216,6 +216,7 @@ Here **8x-PLL** means it uses a frequency divider of 8, thus generating a clock 
 ### DAC:
 A DAC (Digital-to-Analog Converter) is a circuit that converts digital data into a real-world, continuous analog signal. It acts as a bridge between the digital world of processors and the analog world we live in. A DAC receives a binary number as its input. Each bit in this number has a specific weight. The DAC creates an output voltage that is the sum of the weights of all the bits that are '1'. The Most Significant Bit (MSB) has the highest weight, and the Least Significant Bit (LSB) has the smallest. 
 
+**Block diagram -**
 <p align="center">
   <img width="293" height="325" alt="image" src="https://github.com/user-attachments/assets/64e1b925-eefd-4601-9065-82b473c38d0c" />
 </p>
