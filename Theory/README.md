@@ -216,7 +216,10 @@ Here **8x-PLL** means it uses a frequency divider of 8, thus generating a clock 
 ### DAC:
 A DAC (Digital-to-Analog Converter) is a circuit that converts digital data into a real-world, continuous analog signal. It acts as a bridge between the digital world of processors and the analog world we live in. A DAC receives a binary number as its input. Each bit in this number has a specific weight. The DAC creates an output voltage that is the sum of the weights of all the bits that are '1'. The Most Significant Bit (MSB) has the highest weight, and the Least Significant Bit (LSB) has the smallest. 
 
-<img width="293" height="325" alt="image" src="https://github.com/user-attachments/assets/64e1b925-eefd-4601-9065-82b473c38d0c" />
+<p align="center">
+  <img width="293" height="325" alt="image" src="https://github.com/user-attachments/assets/64e1b925-eefd-4601-9065-82b473c38d0c" />
+</p>
+
 
 #### Characteristics of a DAC are:
 
