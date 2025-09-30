@@ -110,7 +110,7 @@ Explanation of the command:
 
 ### 4. Analyzing the waveform:
 
-#### **`avsdpll_1v8` PLL:**
+#### i. **`avsdpll_1v8` PLL:**
 
 **Input and Output Ports**
 
@@ -171,6 +171,6 @@ Based on the code, the expected output is to see the following behavior in a wav
 7. The `VCO_IN` signal is the signal which is recieved after the frequency division of the output. As it is a feedback signal we can observe a slight delay when compared to the `REF` input signal.
 8. By verifying the waveform we can tell that the PLL is working as a **8x frequency multiplier**.
 
-#### **`rvmyth` RISC-V processor:**
+#### ii. **`rvmyth` RISC-V processor:**
 
 ---
