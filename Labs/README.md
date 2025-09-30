@@ -110,7 +110,7 @@ Explanation of the command:
 
 ### 4. Analyzing the waveform:
 
-#### i. **`avsdpll_1v8` PLL:**
+#### i. **`avsdpll_1v8` 8x PLL:**
 
 * **Input and Output Ports** -
 
@@ -130,16 +130,55 @@ Explanation of the command:
 
 * **Verilog Code** -
     ```verilog
+    module avsdpll (
+   output reg  CLK,
+   input  wire VCO_IN,
+   input  wire ENb_CP,
+   input  wire ENb_VCO,
+   input  wire REF
+    );
+       real period, lastedge, refpd;
 
+       initial begin
+          lastedge = 0.0;
+          period = 25.0; // 25ns period = 40MHz
+          CLK <= 0;
+       end
+
+      // Toggle clock at rate determined by period
+       always @(CLK or ENb_VCO) begin
+          if (ENb_VCO == 1'b1) begin
+             #(period / 2.0);
+             CLK <= (CLK === 1'b0);
+          end
+          else if (ENb_VCO == 1'b0) begin
+             CLK <= 1'b0;
+          end 
+          else begin
+             CLK <= 1'bx;
+          end
+       end
+   
+       // Update period on every reference rising edge
+       always @(posedge REF) begin
+          if (lastedge > 0.0) begin
+             refpd = $realtime - lastedge;
+             // Adjust period towards 1/8 the reference period
+             //period = (0.99 * period) + (0.01 * (refpd / 8.0));
+             period =  (refpd / 8.0) ;
+          end
+          lastedge = $realtime;
+       end
+    endmodule
     ```
 
 * **Functionality** -
 
-    The model operates with two main processes running in parallel:
+    The module operates with two main processes running in parallel:
 
-    1.  **Clock Generation**: An `always` block continuously generates the `CLK` output. It waits for a duration of `period / 2.0`, then inverts the `CLK` signal. This creates a clock wave with a 50% duty cycle whose frequency is determined by the `period` variable. This process only runs when the `ENb_VCO` signal is high.
+  * **Clock Generation**: An `always` block continuously generates the `CLK` output. It waits for a duration of `period / 2.0`, then inverts the `CLK` signal. This creates a clock wave with a 50% duty cycle whose frequency is determined by the `period` variable. This process only runs when the `ENb_VCO` signal is high.
 
-    2.  **Frequency Locking**: On every rising edge of the `REF` input, it measures the time that has passed since the *last* rising edge. This gives it the period of the reference clock (`refpd`). It then immediately sets the output clock's `period` to be **exactly 1/8th of the measured reference period** (`period = refpd / 8.0`).
+  * **Frequency Locking**: On every rising edge of the `REF` input, it measures the time that has passed since the *last* rising edge. This gives it the period of the reference clock (`refpd`). It then immediately sets the output clock's `period` to be **exactly 1/8th of the measured reference period** (`period = refpd / 8.0`).
 
     This behavior perfectly models the primary function of an **8x frequency multiplier**.
 
@@ -147,25 +186,261 @@ Explanation of the command:
 
     Based on the code, the expected output is to see the following behavior in a waveform viewer:
 
-    1.  **Initial State**: The simulation will start, and the `CLK` output will begin toggling with its initial period of **25 ns** (a frequency of 40 MHz).
+  * **Initial State**: The simulation will start, and the `CLK` output will begin toggling with its initial period of **25 ns** (a frequency of 40 MHz).
 
-    2.  **Locking Event**: The model waits for the **second** rising edge of the `REF` clock (it needs two edges to measure one period). At that exact moment, it will calculate the `REF` period. The `CLK` period will instantly change to be 1/8th of the `REF` period.
+  * **Locking Event**: The model waits for the **second** rising edge of the `REF` clock (it needs two edges to measure one period). At that exact moment, it will calculate the `REF` period. The `CLK` period will instantly change to be 1/8th of the `REF` period.
 
-    3.  **Final State**: The `CLK` output will continue to run at a time period that is exactly **by 8** the frequency of the `REF` input. This means that the `CLK` will be running with a frequency of **8 times** that of the `REF` signal.
+  * **Final State**: The `CLK` output will continue to run at a time period that is exactly **by 8** the frequency of the `REF` input. This means that the `CLK` will be running with a frequency of **8 times** that of the `REF` signal.
 
 * **Recieved Output** -
     ...image of the waveform of the PLL output
 
 * **Analyzing the recieved output** -
-    1. The initial output `CLK` is having a period of **25ns** then it instantly changes to **35.416ns** which is `REF/8.0`.
-    2. The internal variable `lastedge` tells the occurance of the rising edge in the `REF` signal.
-    3. The internal variable `refpd` tells the period of the `REF` signal.
-    4. The internal variable `period` tells the period of the output `CLK` signal.
-    5. The `ENb_VCO` signal is high from the start of the simulation thus the PLL gives the output from the very start of the simulation.
-    6. The `ENb_CP` signal is `x` throughout the input as it is not used in the design.
-    7. The `VCO_IN` signal is the signal which is recieved after the frequency division of the output. As it is a feedback signal we can observe a slight delay when compared to the `REF` input signal.
-    8. By verifying the waveform we can tell that the PLL is working as a **8x frequency multiplier**.
+  * The initial output `CLK` is having a period of **25ns** then it instantly changes to **35.416ns** which is `REF/8.0`.
+  * The internal variable `lastedge` tells the occurance of the rising edge in the `REF` signal.
+  * The internal variable `refpd` tells the period of the `REF` signal.
+  * The internal variable `period` tells the period of the output `CLK` signal.
+  * The `ENb_VCO` signal is high from the start of the simulation thus the PLL gives the output from the very start of the simulation.
+  * The `ENb_CP` signal is `x` throughout the input as it is not used in the design.
+  * The `VCO_IN` signal is the signal which is recieved after the frequency division of the output. As it is a feedback signal we can observe a slight delay when compared to the `REF` input signal.
+  * By verifying the waveform we can tell that the PLL is working as a **8x frequency multiplier**.
 
-#### ii. **`rvmyth` RISC-V processor:**
+---
+
+#### ii. **`avsddac` 10 bit-DAC:**
+
+* **Input and Output Ports** -
+
+  * **Input Ports**:
+
+      * `D[9:0]`: This is the main **10-bit digital input value**. This binary number (ranging from 0 to 1023) is what the module converts into an analog voltage.
+      * `VREFH`: A `real` input that represents the **High Reference Voltage**. This defines the maximum output voltage of the DAC.
+      * `VREFL`: A `real` input that represents the **Low Reference Voltage**. This defines the minimum output voltage of the DAC.
+
+  * **Output Ports**:
+
+      * `OUT`: A `real` output that represents the resulting **analog voltage**.
+
+* **Internal Wires and Variables** -
+
+  * `EN`: An internal wire that acts as an **Enable** signal.
+  * `Dext[10:0]`: An 11-bit extended version of the 10-bit input `D`. This is used to ensure the `$itor` (integer to real) conversion function works correctly.
+  * `NaN`: A `real` variable used to represent an undefined state ("Not a Number").
+
+* **Verilog Code** -
+
+    ```verilog
+    module avsddac (
+   OUT,
+   D,
+   VREFH,
+   VREFL
+    );
+
+   output      OUT;
+   input [9:0] D;
+   input       VREFH;
+   input       VREFL;
+   
+
+   reg  real OUT;
+   wire real VREFL;
+   wire real VREFH;
+
+   real NaN;
+   wire EN;
+
+   wire [10:0] Dext;	// unsigned extended
+
+   assign Dext = {1'b0, D};
+   assign EN = 1;
+
+   initial begin
+      NaN = 0.0 / 0.0;
+      if (EN == 1'b0) begin
+         OUT <= 0.0;
+      end
+      else if (VREFH == NaN) begin
+         OUT <= NaN;
+      end
+      else if (VREFL == NaN) begin
+         OUT <= NaN;
+      end
+      else if (EN == 1'b1) begin
+         OUT <= VREFL + ($itor(Dext) / 1023.0) * (VREFH - VREFL);
+      end
+      else begin
+         OUT <= NaN;
+      end
+   end
+
+   always @(D or EN or VREFH or VREFL) begin
+      if (EN == 1'b0) begin
+         OUT <= 0.0;
+      end
+      else if (VREFH == NaN) begin
+         OUT <= NaN;
+      end
+      else if (VREFL == NaN) begin
+         OUT <= NaN;
+      end
+      else if (EN == 1'b1) begin
+         OUT <= VREFL + ($itor(Dext) / 1023.0) * (VREFH - VREFL);
+      end
+      else begin
+         OUT <= NaN;
+          end
+       end
+    endmodule
+    ```
+* **Basic Functionality** -
+
+    The core of this module is a single line of code that executes whenever any input changes:
+
+    ```verilog
+    OUT <= VREFL + ($itor(Dext) / 1023.0) * (VREFH - VREFL);
+    ```
+
+ This is the mathematical formula for a linear DAC. It works by:
+
+ * Calculating the total voltage range (`VREFH - VREFL`).
+ * Scaling the digital input `D` to a fraction between 0.0 and 1.0 (by dividing it by 1023.0, the maximum value for a 10-bit number).
+ * Multiplying the voltage range by this fraction.
+ * Adding the result to the base low voltage (`VREFL`).
+
+ Overall it maps the digital input value (0-1023) linearly onto the analog voltage range defined by `VREFL` and `VREFH`.
+
+* **Expected Output** -
+
+ The output `OUT` will be a `real` voltage value that changes instantly in response to changes in the digital input `D`.
+
+  * When the input `D` is **0** (`10'b0000000000`), the output `OUT` will be exactly equal to **`VREFL`**.
+  * When the input `D` is **1023** (`10'b1111111111`), the output `OUT` will be exactly equal to **`VREFH`**.
+  * When the input `D` is halfway, for example **512** (`10'b1000000000`), the output `OUT` will be almost exactly in the middle of `VREFL` and `VREFH`.
+
+* **Recieved Output** -
+  ...recieved output for dac image
+
+* **Analysis of the recieved output** -
+  * In the input `D` we can see that as time increases intially the output keeps increasing till it reaches a peak value of `946`. After reaching the peak value the input decreases steadily.
+  * The `VREFH` is 1 and `VREFL` is 0. The `EN` signal is always high.
+  * Correspondingly we can observe the analog output which is being generated between the values of `0 -> 0 and 946 -> 0.9247311`.
+
+---
+
+#### iii. **`rvmyth` core:** 
+
+* **Input and Output Ports**
+
+    * **Input Ports**:
+        * `CLK`: The main system **clock** signal that drives the processor's pipeline.
+        * `reset`: A signal to reset the processor to its initial state (e.g., setting the program counter to zero).
+
+    * **Output Ports**:
+        * `OUT[9:0]`: A 10-bit output port. The final line of the code (`OUT = CPU_Xreg_value_a5[17];`) reveals that this port is directly connected to the value of **register x17**.
+
+* **Internal Structure**
+
+    * **Pipelined Signals**: The signal names follow a pattern like `CPU_pc_a1`, `CPU_instr_a2`, etc. The `_a0` through `_a5` suffix indicates the pipeline stage the signal belongs to, representing a classic 5-stage pipeline (Fetch, Decode, Execute, Memory, Writeback).
+    * **Instruction Memory (`instrs` array)**: This is a **hardcoded ROM** inside the processor. It contains a fixed 13-instruction program that the CPU will execute. This means the CPU isn't fetching code from the outside world; it runs this specific program every time.
+    * **Register File (`CPU_Xreg_value_a*`)**: This represents the 32 general-purpose 32-bit registers (x0-x31) of the RISC-V architecture.
+    * **Data Memory (`CPU_Dmem_value_a*`)**: A small internal RAM for the processor to use for load and store operations.
+
+* **Basic Functionality**
+
+Of course. Here is a detailed breakdown of the `rvmyth` processor's 5-stage pipeline, suitable for your GitHub repository's documentation.
+
+---
+## The RVMYTH 5-Stage RISC-V Pipeline
+
+The instruction cycle in the `rvmyth` core is implemented using a classic **5-stage RISC pipeline**. Pipelining is an implementation technique where multiple instructions are overlapped in execution, much like an assembly line. Instead of waiting for one instruction to complete all its steps before starting the next, the pipeline allows the processor to work on five different instructions simultaneously, with each one in a different stage. This dramatically increases the instruction **throughput** (the number of instructions completed per unit of time).
+
+The five stages are: **Instruction Fetch (IF)**, **Instruction Decode (ID)**, **Execute (EX)**, **Memory Access (MEM)**, and **Writeback (WB)**. Each stage completes its work in one clock cycle and passes its result to the next stage.
+
+
+
+---
+### 1. Stage 1: Instruction Fetch (IF)
+
+**Purpose**: To retrieve the next instruction to be executed from memory.
+
+* **1. Send Address to Memory**: The current value of the **Program Counter (PC)**, which holds the address of the current instruction, is sent to the Instruction Memory.
+* **2. Read Instruction**: The Instruction Memory finds and returns the 32-bit instruction stored at that address.
+* **3. Increment Program Counter**: In parallel, an adder calculates the address of the next sequential instruction by computing **PC + 4** (since each RISC-V instruction is 4 bytes long).
+* **4. Pass to Next Stage**: The fetched instruction and the incremented PC value (`PC + 4`) are passed to the ID stage. The PC is updated with `PC + 4` unless a branch or jump instruction directs it elsewhere.
+
+---
+### 2. Stage 2: Instruction Decode (ID)
+
+**Purpose**: To understand what the fetched instruction needs to do and to gather the required operands from the registers.
+
+* **1. Decode Opcode**: The control unit looks at the `opcode`, `funct3`, and `funct7` fields of the 32-bit instruction to identify its type (e.g., `ADDI`, `LW`, `BNE`) and format (R-type, I-type, etc.).
+* **2. Generate Control Signals**: Based on the instruction type, all the necessary control signals for the subsequent stages are generated. For example, it determines if the ALU should add or subtract, if a memory read is needed, and if a result should be written back to a register.
+* **3. Read Registers**: The `rs1` and `rs2` fields of the instruction, which specify the source register numbers, are sent to the **Register File**. The values stored in these registers are read out.
+* **4. Sign-Extend Immediate**: If the instruction contains an immediate (constant) value, it is extracted and sign-extended to 32 bits.
+* **5. Pass to Next Stage**: The register values, the immediate, the control signals, and the destination register number (`rd`) are all passed to the EX stage.
+
+---
+### 3. Stage 3: Execute (EX)
+
+**Purpose**: To perform the primary calculation or operation required by the instruction.
+
+* **1. Perform ALU Operation**: The **Arithmetic Logic Unit (ALU)** takes the operands (either from two registers or one register and an immediate) and performs the action dictated by the control unit.
+    * For **arithmetic/logic instructions** (like `ADD`, `ADDI`, `OR`), the ALU calculates the result.
+    * For **branch instructions** (like `BEQ`, `BNE`), the ALU compares the two register values and outputs a signal indicating if the condition is true.
+    * For **load/store instructions** (like `LW`, `SW`), the ALU calculates the effective memory address by adding the base register value and the immediate offset.
+* **2. Pass to Next Stage**: The result of the ALU operation is passed to the MEM stage.
+
+---
+### 4. Stage 4: Memory Access (MEM)
+
+**Purpose**: To read data from or write data to the main Data Memory. This stage is only active for load and store instructions.
+
+* **1. Access Memory**:
+    * If the instruction is a **Load** (e.g., `LW`), the address calculated by the ALU is sent to the Data Memory. The memory's `read_enable` signal is asserted, and the data at that address is read out.
+    * If the instruction is a **Store** (e.g., `SW`), the address from the ALU and the data from the `rs2` register are sent to the Data Memory. The memory's `write_enable` signal is asserted, and the data is written into memory.
+* **2. Pass to Next Stage**: For load instructions, the data read from memory is passed to the WB stage. For all other instructions, the result from the ALU is simply passed through this stage untouched.
+
+---
+### 5. Stage 5: Writeback (WB)
+
+**Purpose**: To write the final result of the instruction back into the Register File.
+
+* **1. Select Result**: This stage selects the value to be written. It's either the result from the ALU (for arithmetic/logic instructions) or the data read from memory (for load instructions).
+* **2. Write to Register File**: The selected data is written into the destination register (`rd`) specified by the instruction. The `write_enable` signal for the Register File is asserted.
+
+With this final step, the instruction has completed its execution. As this instruction finishes, four other instructions are already following it through the preceding stages of the pipeline.
+
+
+Instructions which are happening:
+```assembly
+addi x9, x0, 1
+addi x10, x0, 43
+addi x11, x0, 0
+addi x17, x0, 0
+add  x17, x17, x11
+addi x11, x11, 1
+bne  x11, x10, -8
+add  x17, x17, x11
+sub  x17, x17, x11
+sub  x11, x11, x9
+bne  x11, x9, -8
+sub  x17, x17, x11
+beq  x0, x0, 0
+```
+
+* **Expected Output**
+
+    * The processor will take a number of clock cycles to execute the program. During this time, the `OUT` port (reflecting register `r17`) will change as intermediate values are calculated.
+    * After the program completes its main calculations (after instruction #11) and enters the infinite loop, register `r17` will hold the final value of **0**.
+    * Therefore, the expected final output is that the `OUT[9:0]` port will settle to a stable value of **`10'b0000000000`** and remain there for the rest of the simulation.
+
+* **Recieved Output** -
+  ...recieved output for rvmyth or core image
+
+* **Analysis of the recieved output** -
+  * In the input `D` we can see that as time increases intially the output keeps increasing till it reaches a peak value of `946`. After reaching the peak value the input decreases steadily.
+  * The `VREFH` is 1 and `VREFL` is 0.
+  * Corresponsingly we can observe the analog output which is being generated between the values of ` -> 0 and -> 1`.
 
 ---
