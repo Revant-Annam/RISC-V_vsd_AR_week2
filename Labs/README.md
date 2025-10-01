@@ -332,99 +332,122 @@ This is the block diagram of `avsddac`:
 
 ---
 
-#### iii. **`rvmyth` core:** 
-This is a basic architecture of the RISC-V core:
-<img width="892" height="459" alt="image" src="https://github.com/user-attachments/assets/858c8868-208a-4d83-9eea-c9a9952a65a8" />
+Perfect! Here’s the **complete `rvmyth` core description** written in the **same style and indentation** you used, starting from the top (architecture, ports, internal structure, hard-coded instructions) and including **a0 and a1 stages**.
 
+---
+
+#### iii. **`rvmyth` core:**
+
+This is a basic architecture of the RISC-V core: <img width="892" height="459" alt="image" src="https://github.com/user-attachments/assets/858c8868-208a-4d83-9eea-c9a9952a65a8" />
 
 * **Input and Output Ports** -
 
-    * **Input Ports**:
-        * `CLK`: The main system **clock** signal that drives the processor's pipeline.
-        * `reset`: A signal to reset the processor to its initial state (e.g., setting the program counter to zero).
+  * **Input Ports**:
 
-    * **Output Ports**:
-        * `OUT[9:0]`: A 10-bit output port. The final line of the code (`OUT = CPU_Xreg_value_a5[17];`) reveals that this port is directly connected to the value of **register x17**.
+    * `CLK`: The main system **clock** signal that drives the processor's pipeline.
+    * `reset`: A signal to reset the processor to its initial state (e.g., setting the program counter to zero).
+
+  * **Output Ports**:
+
+    * `OUT[9:0]`: A 10-bit output port. The final line of the code (`OUT = CPU_Xreg_value_a5[17];`) reveals that this port is directly connected to the value of **register x17**.
 
 * **Internal Structure** -
 
-    * **Pipelined Signals**: The signal names follow a pattern. The `_a0` through `_a5` suffix indicates the pipeline stage the signal belongs to, representing a 5-stage pipeline (Fetch, Decode, Execute(ALU), Memory(load/store), Writeback). 
-    * **Instruction Memory (`instrs` array)**: This is a **hardcoded ROM** inside the processor. It contains a fixed 13-instruction program that the CPU will execute. This means the CPU isn't fetching code from the outside world; it runs this specific program every time the system is turned on.
-    * **Register File (`CPU_Xreg_value_a*`)**: This represents the 32 general-purpose 32-bit registers (x0-x31) of the RISC-V architecture.
-    * **Data Memory (`CPU_Dmem_value_a*`)**: A small internal RAM for the processor to use for load and store operations.
-      
+  * **Pipelined Signals**: The signal names follow a pattern. The `_a0` through `_a5` suffix indicates the pipeline stage the signal belongs to, representing a 5-stage pipeline (Fetch, Decode, Execute(ALU), Memory(load/store), Writeback).
+  * **Instruction Memory (`instrs` array)**: This is a **hardcoded ROM** inside the processor. It contains a fixed 13-instruction program that the CPU will execute. This means the CPU isn't fetching code from the outside world; it runs this specific program every time the system is turned on.
+  * **Register File (`CPU_Xreg_value_a*`)**: This represents the 32 general-purpose 32-bit registers (x0-x31) of the RISC-V architecture.
+  * **Data Memory (`CPU_Dmem_value_a*`)**: A small internal RAM for the processor to use for load and store operations.
+
 * **Instructions which are hard-coded in the ROM** -
-    ```assembly
-    addi x9, x0, 1
-    addi x10, x0, 43
-    addi x11, x0, 0
-    addi x17, x0, 0
-    add  x17, x17, x11
-    addi x11, x11, 1
-    bne  x11, x10, -8
-    add  x17, x17, x11
-    sub  x17, x17, x11
-    sub  x11, x11, x9
-    bne  x11, x9, -8
-    sub  x17, x17, x11
-    beq  x0, x0, 0
-    ```
-    
+
+  ```assembly
+  addi x9, x0, 1
+  addi x10, x0, 43
+  addi x11, x0, 0
+  addi x17, x0, 0
+  add  x17, x17, x11
+  addi x11, x11, 1
+  bne  x11, x10, -8
+  add  x17, x17, x11
+  sub  x17, x17, x11
+  sub  x11, x11, x9
+  bne  x11, x9, -8
+  sub  x17, x17, x11
+  beq  x0, x0, 0
+  ```
+
 * **Basic Functionality** -
-    The pipelining is done in an organized manner with `ai` where i is the stage of the instruction.
-
-    * **Stage a0 – Fetch Stage** - Fetch the instruction from instruction memory and prepare the PC for the next stage.
-
-        | Variables               | What It Does / Represents                                                               |
-        | -------------------------- | --------------------------------------------------------------------------------------- |
-        | `CPU_reset_a0`             | Input reset signal; used to initialize PC to 0.                                         |
-        | `CPU_pc_a0`                | Current program counter (PC). If reset → 0, else computed next PC.                      |
-        | `CPU_imem_rd_en_a0`        | Enables instruction memory read (1 if fetch active).                                    |
-        | `CPU_imem_rd_addr_a0`      | Address to read instruction from instruction memory (`PC[4:2]` used for word indexing). |
-
-        **Flow in a0:**
-
-        1. **Reset check:** If `CPU_reset_a0 = 1`, `CPU_pc_a0 = 0` (start of program).
-        2. **Instruction memory read enable:** `CPU_imem_rd_en_a0 = !CPU_reset_a0` → active unless in reset.
-        3. **Read address generation:** `CPU_imem_rd_addr_a0 = CPU_pc_a0[4+1:2]` → index for instruction memory which is PC/4.
-        4. **Output:** Provides `CPU_pc_a0` and `CPU_imem_rd_addr_a0` for the next stage (`a1`).
-
-        **In short:**
-        > **a0 stage calculates the PC, enables instruction memory read, and passes the instruction address to the decode stage.**
-
-    With the help of the first instruction lets understand the basic functionality of the `rvmyth`
-
-    **Instruction:**
-
-    ```
-    ADDI r9, r0, 1
-    ```
-
-    * Adds immediate `1` to `r0` (which is always 0) and writes result to `r9`.
-    **Stage-by-stage Execution of `ADDI r9, r0, 1`**
-
-| Stage                                      | Suffix | What happens                                                                               | Relevant Variables                                                                                                                                  |
-| ------------------------------------------ | ------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **0 – Fetch**                              | `a0`   | PC is used to fetch instruction from instruction memory.                                   | `CPU_pc_a0` → PC (0 at reset)<br>`CPU_imem_rd_en_a0` → 1<br>`CPU_imem_rd_addr_a0` → 0 (instruction index)                                           |
-| **1 – Decode**                             | `a1`   | Instruction decoded; identify it as `I-type` and immediate extracted.                      | `CPU_instr_a1` → `instrs[0]`<br>`CPU_imm_a1` → `1`<br>`CPU_is_i_instr_a1` → 1<br>`CPU_rs1_a1` → r0<br>`CPU_rd_a1` → r9<br>`CPU_opcode_a1` → 0010011 |
-| **2 – Register Read / Target Calculation** | `a2`   | Read source register `r0` (always 0). Compute jump/branch targets (not relevant for ADDI). | `CPU_src1_value_a2` → `CPU_Xreg_value_a4[r0]` → 0<br>`CPU_src2_value_a2` → N/A<br>`CPU_br_tgt_pc_a2`, `CPU_jalr_tgt_pc_a2` → computed but unused    |
-| **3 – Execute / ALU**                      | `a3`   | ALU performs addition with immediate.                                                      | `CPU_result_a3` → `CPU_src1_value_a3 + CPU_imm_a3` → `0 + 1 = 1`<br>`CPU_rf_wr_en_a3` → 1 (because rd=r9 valid)<br>`CPU_valid_a3` → 1               |
-| **4 – Memory Access**                      | `a4`   | No memory operation needed for ADDI. Signals just pass through.                            | `CPU_dmem_rd_en_a4` → 0<br>`CPU_dmem_wr_en_a4` → 0<br>`CPU_dmem_addr_a4` → N/A                                                                      |
-| **5 – Writeback**                          | `a5`   | ALU result written to destination register `r9`.                                           | `CPU_Xreg_value_a5[r9]` → 1<br>`OUT` → 1 (for your waveform)                                                                                        |
-
-
-* **Expected Output**
-
-    * The processor will take a number of clock cycles to execute the program. During this time, the `OUT` port (reflecting register `r17`) will change as intermediate values are calculated.
-    * After the program completes its main calculations (after instruction #11) and enters the infinite loop, register `r17` will hold the final value of **0**.
-    * Therefore, the expected final output is that the `OUT[9:0]` port will settle to a stable value of **`10'b0000000000`** and remain there for the rest of the simulation.
-
-* **Recieved Output** -
-  ...recieved output for rvmyth or core image
-
-* **Analysis of the recieved output** -
-  * In the input `D` we can see that as time increases intially the output keeps increasing till it reaches a peak value of `946`. After reaching the peak value the input decreases steadily.
-  * The `VREFH` is 1 and `VREFL` is 0.
-  * Corresponsingly we can observe the analog output which is being generated between the values of ` -> 0 and -> 1`.
+  The pipelining is done in an organized manner with `ai` where i is the stage of the instruction.
 
 ---
+
+### **Stage a0 – Fetch Stage**
+
+**Purpose:** Fetch the instruction from instruction memory and prepare the PC for the next stage.
+
+| Variables             | What It Does / Represents                                                               |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `CPU_reset_a0`        | Input reset signal; used to initialize PC to 0.                                         |
+| `CPU_pc_a0`           | Current program counter (PC). If reset → 0, else computed next PC.                      |
+| `CPU_imem_rd_en_a0`   | Enables instruction memory read (1 if fetch active).                                    |
+| `CPU_imem_rd_addr_a0` | Address to read instruction from instruction memory (`PC[4:2]` used for word indexing). |
+
+**Flow in a0:**
+
+1. **Reset check:** If `CPU_reset_a0 = 1`, `CPU_pc_a0 = 0` (start of program).
+2. **Instruction memory read enable:** `CPU_imem_rd_en_a0 = !CPU_reset_a0` → active unless in reset.
+3. **Read address generation:** `CPU_imem_rd_addr_a0 = CPU_pc_a0[4+1:2]` → index for instruction memory which is PC/4.
+4. **Output:** Provides `CPU_pc_a0` and `CPU_imem_rd_addr_a0` for the next stage (`a1`).
+
+💡 **In short:**
+
+> **a0 stage calculates the PC, enables instruction memory read, and passes the instruction address to the decode stage.**
+
+---
+
+### **Stage a1 – Decode Stage**
+
+**Purpose:** Decode the fetched instruction, extract operands, immediate values, and identify instruction type.
+
+| Variables                            | What It Does / Represents                                                    |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| `CPU_instr_a1`                       | Holds the 32-bit instruction fetched from memory.                            |
+| `CPU_inc_pc_a1`                      | PC incremented by 4 (next sequential instruction address).                   |
+| `CPU_is_i_instr_a1`                  | 1 if instruction is I-type (like ADDI, loads).                               |
+| `CPU_is_r_instr_a1`                  | 1 if instruction is R-type (like ADD, SUB).                                  |
+| `CPU_is_s_instr_a1`                  | 1 if instruction is S-type (store).                                          |
+| `CPU_is_b_instr_a1`                  | 1 if instruction is B-type (branch).                                         |
+| `CPU_is_u_instr_a1`                  | 1 if instruction is U-type (LUI/AUIPC).                                      |
+| `CPU_is_j_instr_a1`                  | 1 if instruction is J-type (JAL).                                            |
+| `CPU_imm_a1`                         | Extracted immediate value based on instruction type.                         |
+| `w_CPU_rs1_a1`                       | Source register 1 index.                                                     |
+| `w_CPU_rs2_a1`                       | Source register 2 index (if needed).                                         |
+| `w_CPU_rd_a1`                        | Destination register index.                                                  |
+| `CPU_funct3_a1`                      | funct3 field of the instruction (used for operation type).                   |
+| `CPU_funct7_a1`                      | funct7 field of the instruction (used for operation type).                   |
+| `CPU_dec_bits_a1`                    | Concatenation of funct7[5], funct3, opcode to identify instruction uniquely. |
+| `CPU_is_addi_a1`, `CPU_is_add_a1`, … | Signals for specific instructions (decoded from `CPU_dec_bits_a1`).          |
+| `CPU_is_jump_a1`                     | 1 if instruction is JAL or JALR.                                             |
+
+**Flow in a1:**
+
+1. **Instruction decode:**
+
+   * Determine the instruction type (I, R, S, B, U, J).
+   * Extract immediate (`CPU_imm_a1`) if required.
+
+2. **Register indices:**
+
+   * Determine source (`rs1`, `rs2`) and destination (`rd`) registers.
+
+3. **Operation identification:**
+
+   * Generate flags like `CPU_is_addi_a1`, `CPU_is_sub_a1`, `CPU_is_jump_a1` for control signals in later stages.
+
+4. **PC increment:**
+
+   * Compute `CPU_inc_pc_a1 = CPU_pc_a1 + 4` for the next sequential instruction.
+
+💡 **In short:**
+
+> **a1 stage decodes the instruction, identifies the type, extracts immediate and register indices, and sets up control signals for ALU, branch, or memory operations in later stages.**
