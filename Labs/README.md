@@ -373,7 +373,7 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
   sub  x11, x11, x9
   bne  x11, x9, -8
   sub  x17, x17, x11
-  beq  x0, x0, 0
+  beq  x0, x0, -32
   ```
 
 * **Basic Functionality** -
@@ -500,11 +500,10 @@ Got it 👍 — you want **a3 explained in the same concise “LHS variable → 
 | `CPU_valid_load_a3`     | Marks a valid load instruction.                                                                |
 | `CPU_valid_jump_a3`     | Marks a valid jump (JAL/JALR).                                                                 |
 | `CPU_valid_a3`          | Overall validity of this stage after considering branches/load.                                     |
-| `CPU_Xreg_value_a3[x]`  | Register file contents updated here if write enabled.                                          |
 
 ---
 
-## **Flow of Execution in a3 (in short)**
+**Flow in a3**
 
 1. **Operands** (`src1`, `src2`, `imm`) arrive from decode (a2).
 2. **ALU computes** `CPU_result_a3` depending on opcode.
@@ -512,11 +511,9 @@ Got it 👍 — you want **a3 explained in the same concise “LHS variable → 
 4. **Jump condition** evaluated → `CPU_valid_jump_a3` raised for JAL/JALR.
 5. **Load check** → `CPU_valid_load_a3` asserted if instruction is a load.
 6. **Register write-back control** signals prepared:
-
    * `CPU_rf_wr_en_a3` (enable)
    * `CPU_rf_wr_index_a3` (which register)
    * `CPU_rf_wr_data_a3` (what value)
-7. **Register file updated** (`CPU_Xreg_value_a3`) if destination register matches.
 8. **Validity finalized** (`CPU_valid_a3`) → ensures flushes/jumps/loads are handled cleanly.
 
 ---
@@ -524,16 +521,9 @@ Got it 👍 — you want **a3 explained in the same concise “LHS variable → 
 👉 In short: **a3 executes the instruction, resolves branches/jumps, and sets up the write-back path.**
 
 ---
-Here’s the **structured explanation for stage a4** in the same style as a3/a5:
 
----
-
-## **Stage a4 – Memory access**
+#### **Stage a4 – Memory access**
 **Purpose:** For **load instructions**, data is read from memory. For **store instructions**, data is written to memory. This stage computes memory addresses using the ALU result from **a3** and handles memory read/write enable signals.
-
----
-
-## **Key LHS Variables in a4**
 
 | **LHS Variable**          | **Function**                                                                |
 | ------------------------- | --------------------------------------------------------------------------- |
@@ -548,28 +538,20 @@ Here’s the **structured explanation for stage a4** in the same style as a3/a5:
 
 ---
 
-## **Flow of Execution in a4**
+**Flow in a4**
 
-1. **Memory Address Setup:**
-
-   * Compute memory address using ALU result: `CPU_dmem_addr_a4 = CPU_result_a4[5:2]`.
+1. **Memory Address Setup:** Compute memory address using ALU result: `CPU_dmem_addr_a4 = CPU_result_a4[5:2]`.
 
 2. **Read/Write Control Signals:**
 
    * `CPU_dmem_rd_en_a4` = 1 if instruction is a valid load.
    * `CPU_dmem_wr_en_a4` = 1 if instruction is a valid store.
 
-3. **Memory Write (Store Instruction):**
+3. **Memory Write (Store Instruction):** If `CPU_dmem_wr_en_a4` is high, write `CPU_dmem_wr_data_a4` into the memory location `CPU_dmem_addr_a4`.
 
-   * If `CPU_dmem_wr_en_a4` is high, write `CPU_dmem_wr_data_a4` into the memory location `CPU_dmem_addr_a4`.
+4. **Memory Read (Load Instruction):** If `CPU_dmem_rd_en_a4` is high, read `CPU_Dmem_value_a5[CPU_dmem_addr_a4]` into `w_CPU_dmem_rd_data_a4` for a5.
 
-4. **Memory Read (Load Instruction):**
-
-   * If `CPU_dmem_rd_en_a4` is high, read `CPU_Dmem_value_a5[CPU_dmem_addr_a4]` into `w_CPU_dmem_rd_data_a4` for a5.
-
-5. **Pipeline Register Update:**
-
-   * Memory array `CPU_Dmem_value_a4` updates using either reset values, written data, or next-stage values.
+5. **Pipeline Register Update:** Memory array `CPU_Dmem_value_a4` updates using either reset values, written data, or next-stage values.
 
 ---
 
@@ -577,56 +559,34 @@ Here’s the **structured explanation for stage a4** in the same style as a3/a5:
 
 ---
 
-If you want, I can **combine a0 → a5 into one full table with purpose, LHS variables, and flow** for a complete GitHub-ready summary. Do you want me to do that next?
-
-
-Perfect! Let’s do **a5** in the same structured style.
+Of course. Here is the corrected and detailed breakdown for the **`a5` Write-back stage** in the same format as your document.
 
 ---
+#### **Stage a5 – Write-back (WB)**
 
-## **Stage a5 – Purpose**
+**Purpose:** The final stage of the pipeline. Its purpose is to write the instruction's result—either from the ALU or from memory—back into the destination register in the Register File. This step completes the instruction's execution.
 
-At **a5**, the **register write-back** stage occurs. For most instructions, results computed in the ALU (`a3`) or memory (`a4`) are written to the register file. This stage finalizes instruction execution.
-
----
-
-## **Key LHS Variables in a5**
-
-| **LHS Variable**        | **Function**                                                                  |
-| ----------------------- | ----------------------------------------------------------------------------- |
-| `CPU_rf_wr_en_a5`       | Enables writing to the register file if the instruction is valid.             |
-| `CPU_rf_wr_index_a5`    | Specifies which register will be written to.                                  |
-| `CPU_rf_wr_data_a5`     | Data to write to the destination register (from ALU or memory).               |
-| `CPU_ld_data_a5`        | Load data from memory carried from a4.                                        |
-| `CPU_result_a5`         | ALU result carried from a3.                                                   |
-| `CPU_valid_a5`          | Ensures only valid instructions write to registers.                           |
-| `CPU_valid_load_a5`     | Indicates a valid load instruction result to be written to the register file. |
-| `CPU_valid_taken_br_a5` | Propagates branch-taken status for flushing or pipeline control.              |
+| LHS Variable | Function |
+| :--- | :--- |
+| `CPU_ld_data_a5` | Data read from memory, arriving from the MEM stage (`a4`). |
+| `OUT` | The module's 10-bit output, assigned the value of register `x17` in this stage. |
 
 ---
+**Flow in a5:**
 
-## **Flow of Execution in a5 (in short)**
+1.  **Result Selection:** The logic determines which data to write back.
+    * If the instruction completing is a **Load** (indicated by `CPU_valid_load_a5`), the data to be written is `CPU_ld_data_a5`.
+    * If the instruction is an **ALU operation** (like `ADD`, `ADDI`), the data to be written is the ALU result that has been carried through the pipeline from the Execute stage (`a3`).
 
-1. **Register Write-Back:**
+2.  **Register File Write:** If the instruction has a valid write enable and a destination register (`rd`), the selected result is written into the Register File. This is the **commit** step that makes the result of the instruction visible to the rest of the processor.
 
-   * If `CPU_rf_wr_en_a5` is high, write `CPU_rf_wr_data_a5` into the register file at `CPU_rf_wr_index_a5`.
-   * `CPU_rf_wr_data_a5` comes from either:
-
-     * ALU result (`CPU_result_a5`) for arithmetic/logic instructions.
-     * Memory load (`CPU_ld_data_a5`) for load instructions.
-
-2. **Branch/Jump Completion:**
-
-   * Any branch or jump taken signal (`CPU_valid_taken_br_a5`) is finalized to control PC updates or pipeline flushes.
-
-3. **Instruction Validity Check:**
-
-   * `CPU_valid_a5` ensures only valid instructions affect the register file.
+3.  **Module Output Update:** In this specific design, the `OUT` port is continuously updated with the value held in register `x17` as it appears at the end of the pipeline.
 
 ---
+💡 **In short:**
+> a5 finalizes the instruction by writing the correct result (either from the ALU or from memory) into the destination register.
 
-👉 In short: **a5 finalizes instruction execution by writing results to the register file and confirming branch/jump status.**
+#### **Running of the instructions** -
 
----
+In the hard-coded instructions in our ROM doesn't use the `LOAD` or `STORE` commands so we are not using the memory and write back stages. The values are updated in the registers and the output is taken from the register itself. Understanding of the execution of the instructions for the desired output:
 
-If you want, I can now **make a single table or diagram for a0–a5 with purpose, LHS variables, and flow** so your GitHub repo can have a complete, neat execution summary. Do you want me to do that?
