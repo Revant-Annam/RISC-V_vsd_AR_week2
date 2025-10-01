@@ -110,7 +110,7 @@ Explanation of the command:
 
 ### 4. Analyzing the waveform:
 
-#### i. **`avsdpll` 8x PLL:**
+### i. **`avsdpll` 8x PLL:**
 This is the block diagram of `avsdpll` :
 <img width="800" height="450" alt="image" src="https://github.com/user-attachments/assets/e5c5b873-9f5f-44e8-9a44-98c3110b2ef3" />
 
@@ -209,7 +209,7 @@ This is the block diagram of `avsdpll` :
 
 ---
 
-#### ii. **`avsddac` 10 bit-DAC:**
+### ii. **`avsddac` 10 bit-DAC:**
 This is the block diagram of `avsddac`:
 <img width="803" height="451" alt="image" src="https://github.com/user-attachments/assets/3b3ef41b-eb67-4a00-a5ff-be1e95f0214d" />
 
@@ -336,7 +336,7 @@ Perfect! Here’s the **complete `rvmyth` core description** written in the **sa
 
 ---
 
-#### iii. **`rvmyth` core:**
+### iii. **`rvmyth` core:**
 
 This is a basic architecture of the RISC-V core: <img width="892" height="459" alt="image" src="https://github.com/user-attachments/assets/858c8868-208a-4d83-9eea-c9a9952a65a8" />
 
@@ -381,7 +381,7 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 ---
 
-### **Stage a0 – Fetch Stage**
+#### **Stage a0 – Fetch Stage**
 
 **Purpose:** Fetch the instruction from instruction memory and prepare the PC for the next stage.
 
@@ -396,7 +396,7 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 1. **Reset check:** If `CPU_reset_a0 = 1`, `CPU_pc_a0 = 0` (start of program).
 2. **Instruction memory read enable:** `CPU_imem_rd_en_a0 = !CPU_reset_a0` → active unless in reset.
-3. **Read address generation:** `CPU_imem_rd_addr_a0 = CPU_pc_a0[4+1:2]` → index for instruction memory which is PC/4.
+3. **Read address generation:** `CPU_imem_rd_addr_a0 = CPU_pc_a0[4+1:2]` → index for instruction memory which is PC[4:0]/4.
 4. **Output:** Provides `CPU_pc_a0` and `CPU_imem_rd_addr_a0` for the next stage (`a1`).
 
 💡 **In short:**
@@ -405,7 +405,7 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 ---
 
-### **Stage a1 – Decode Stage**
+#### **Stage a1 – Decode Stage**
 
 **Purpose:** Decode the fetched instruction, extract operands, immediate values, and identify instruction type.
 
@@ -418,7 +418,7 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 | `CPU_is_s_instr_a1`                  | 1 if instruction is S-type (store).                                          |
 | `CPU_is_b_instr_a1`                  | 1 if instruction is B-type (branch).                                         |
 | `CPU_is_u_instr_a1`                  | 1 if instruction is U-type (LUI/AUIPC).                                      |
-| `CPU_is_j_instr_a1`                  | 1 if instruction is J-type (JAL).                                            |
+| `CPU_is_j_instr_a1`                  | 1 if instruction is J-type (Jump).                                            |
 | `CPU_imm_a1`                         | Extracted immediate value based on instruction type.                         |
 | `w_CPU_rs1_a1`                       | Source register 1 index.                                                     |
 | `w_CPU_rs2_a1`                       | Source register 2 index (if needed).                                         |
@@ -433,21 +433,200 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 1. **Instruction decode:**
 
-   * Determine the instruction type (I, R, S, B, U, J).
+   * Determine the instruction type (I, R, S, B, U, J) from `CPU_instr_a1[6:2]` 
    * Extract immediate (`CPU_imm_a1`) if required.
 
-2. **Register indices:**
+2. **Register indices:** Determine source (`rs1`, `rs2`) and destination (`rd`) registers from the `CPU_instr_a1`
 
-   * Determine source (`rs1`, `rs2`) and destination (`rd`) registers.
+3. **Operation identification:** Generate flags like `CPU_is_addi_a1`, `CPU_is_sub_a1`, `CPU_is_jump_a1` for control signals in later stages.
 
-3. **Operation identification:**
-
-   * Generate flags like `CPU_is_addi_a1`, `CPU_is_sub_a1`, `CPU_is_jump_a1` for control signals in later stages.
-
-4. **PC increment:**
-
-   * Compute `CPU_inc_pc_a1 = CPU_pc_a1 + 4` for the next sequential instruction.
+4. **PC increment:** Compute `CPU_inc_pc_a1 = CPU_pc_a1 + 4` for the next sequential instruction.
 
 💡 **In short:**
 
 > **a1 stage decodes the instruction, identifies the type, extracts immediate and register indices, and sets up control signals for ALU, branch, or memory operations in later stages.**
+
+Great — let’s move on to **stage `a2` (Register Read & Target Calculation)** in `rvmyth`, again focusing on the **LHS variables**.
+
+---
+
+#### **Stage a2 – Register Read / Target Calculation**
+
+**Purpose:** Read source register values, compute branch/jump targets, and prepare operands for ALU.
+
+| LHS Variable         | What It Does / Represents                                                           |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| `CPU_src1_value_a2`  | Value read from source register **rs1**.                                            |
+| `CPU_src2_value_a2`  | Value read from source register **rs2**.                                            |
+| `CPU_br_tgt_pc_a2`   | Branch target PC = current PC + immediate.                                          |
+| `CPU_jalr_tgt_pc_a2` | JALR target PC = (rs1 + immediate) with LSB cleared.                                |
+| `CPU_pc_a2`          | PC value carried forward for reference (from fetch).                                |
+
+---
+
+**Flow in a2:**
+
+1. **Register File Read:** `CPU_src1_value_a2` and `CPU_src1_value_a2` ← results in `CPU_result_a3` previous value when `(CPU_rd_a3 == CPU_rs2_a2) && CPU_rf_wr_en_a3` is true else `XReg[CPU_rf_rd_index_1]` or `XReg[CPU_rf_rd_index_2]`.
+
+2. **Branch/Jump Target Calculation:**
+
+   * `CPU_br_tgt_pc_a2 = CPU_pc_a2 + immediate` (for B-type).
+   * `CPU_jalr_tgt_pc_a2 = (CPU_src1_value_a2 + immediate) & ~1` (for JALR).
+
+---
+
+💡 **In short:**
+
+> **a2 stage reads the register file, prepares ALU operands, and computes possible branch/jump targets. It sets up everything needed for execution in `a3`.**
+
+Got it 👍 — you want **a3 explained in the same concise “LHS variable → action” style** like I gave you for **a2**. Here’s the breakdown for **a3**:
+
+---
+
+#### **Stage a3 – Execute (ALU)**
+
+**Purpose:** At **a3**, the instruction is **executed**. The ALU performs arithmetic/logic/shift/comparison, branch and jump conditions are resolved, and control/data signals are prepared for register file write-back. This stage decides the actual result of the instruction.
+
+| LHS Variable        | Function                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| `CPU_result_a3`         | ALU result (ADD, SUB, AND, OR, XOR, shifts, comparisons, LUI, AUIPC, JAL, load/store address). |
+| `CPU_sltu_result_a3`    | Unsigned comparison between `src1` and `src2`.                                                 |
+| `CPU_sltiu_result_a3`   | Unsigned comparison between `src1` and immediate.                                              |
+| `CPU_rf_wr_en_a3`       | Enables register write if valid instruction with rd ≠ 0 (or load coming from a5).              |
+| `CPU_rf_wr_index_a3`    | Destination register index for write-back (rd).                                                |
+| `CPU_rf_wr_data_a3`     | Data to write back → ALU result or load result based on validity                                                |
+| `CPU_taken_br_a3`       | Branch decision flag (BEQ, BNE, BLT, etc.).                                                    |
+| `CPU_valid_taken_br_a3` | If branch is valid and taken, flush younger pipeline instructions and updating PC.                             |
+| `CPU_valid_load_a3`     | Marks a valid load instruction.                                                                |
+| `CPU_valid_jump_a3`     | Marks a valid jump (JAL/JALR).                                                                 |
+| `CPU_valid_a3`          | Overall validity of this stage after considering branches/load.                                     |
+| `CPU_Xreg_value_a3[x]`  | Register file contents updated here if write enabled.                                          |
+
+---
+
+## **Flow of Execution in a3 (in short)**
+
+1. **Operands** (`src1`, `src2`, `imm`) arrive from decode (a2).
+2. **ALU computes** `CPU_result_a3` depending on opcode.
+3. **Branch condition** is checked → `CPU_taken_br_a3` raised if true.
+4. **Jump condition** evaluated → `CPU_valid_jump_a3` raised for JAL/JALR.
+5. **Load check** → `CPU_valid_load_a3` asserted if instruction is a load.
+6. **Register write-back control** signals prepared:
+
+   * `CPU_rf_wr_en_a3` (enable)
+   * `CPU_rf_wr_index_a3` (which register)
+   * `CPU_rf_wr_data_a3` (what value)
+7. **Register file updated** (`CPU_Xreg_value_a3`) if destination register matches.
+8. **Validity finalized** (`CPU_valid_a3`) → ensures flushes/jumps/loads are handled cleanly.
+
+---
+
+👉 In short: **a3 executes the instruction, resolves branches/jumps, and sets up the write-back path.**
+
+---
+Here’s the **structured explanation for stage a4** in the same style as a3/a5:
+
+---
+
+## **Stage a4 – Memory access**
+**Purpose:** For **load instructions**, data is read from memory. For **store instructions**, data is written to memory. This stage computes memory addresses using the ALU result from **a3** and handles memory read/write enable signals.
+
+---
+
+## **Key LHS Variables in a4**
+
+| **LHS Variable**          | **Function**                                                                |
+| ------------------------- | --------------------------------------------------------------------------- |
+| `CPU_dmem_rd_en_a4`       | Enables memory read for valid load instructions.                            |
+| `CPU_dmem_wr_en_a4`       | Enables memory write for valid store instructions.                          |
+| `CPU_dmem_addr_a4`        | Address in memory to read from or write to (computed from `CPU_result_a4`). |
+| `CPU_dmem_wr_data_a4`     | Data to write to memory (from `CPU_src2_value_a4`).                         |
+| `CPU_Dmem_value_a4[dmem]` | Represents the actual memory array element values.                          |
+| `w_CPU_dmem_rd_data_a4`   | Data read from memory to be used in the next stage (a5).                    |
+| `CPU_valid_load_a4`       | Indicates the instruction is a valid load.                                  |
+| `CPU_valid_a4`            | Ensures only valid instructions can write to memory.                        |
+
+---
+
+## **Flow of Execution in a4**
+
+1. **Memory Address Setup:**
+
+   * Compute memory address using ALU result: `CPU_dmem_addr_a4 = CPU_result_a4[5:2]`.
+
+2. **Read/Write Control Signals:**
+
+   * `CPU_dmem_rd_en_a4` = 1 if instruction is a valid load.
+   * `CPU_dmem_wr_en_a4` = 1 if instruction is a valid store.
+
+3. **Memory Write (Store Instruction):**
+
+   * If `CPU_dmem_wr_en_a4` is high, write `CPU_dmem_wr_data_a4` into the memory location `CPU_dmem_addr_a4`.
+
+4. **Memory Read (Load Instruction):**
+
+   * If `CPU_dmem_rd_en_a4` is high, read `CPU_Dmem_value_a5[CPU_dmem_addr_a4]` into `w_CPU_dmem_rd_data_a4` for a5.
+
+5. **Pipeline Register Update:**
+
+   * Memory array `CPU_Dmem_value_a4` updates using either reset values, written data, or next-stage values.
+
+---
+
+👉 In short: **a4 handles memory read/write, computing addresses and preparing data for write-back in a5.**
+
+---
+
+If you want, I can **combine a0 → a5 into one full table with purpose, LHS variables, and flow** for a complete GitHub-ready summary. Do you want me to do that next?
+
+
+Perfect! Let’s do **a5** in the same structured style.
+
+---
+
+## **Stage a5 – Purpose**
+
+At **a5**, the **register write-back** stage occurs. For most instructions, results computed in the ALU (`a3`) or memory (`a4`) are written to the register file. This stage finalizes instruction execution.
+
+---
+
+## **Key LHS Variables in a5**
+
+| **LHS Variable**        | **Function**                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `CPU_rf_wr_en_a5`       | Enables writing to the register file if the instruction is valid.             |
+| `CPU_rf_wr_index_a5`    | Specifies which register will be written to.                                  |
+| `CPU_rf_wr_data_a5`     | Data to write to the destination register (from ALU or memory).               |
+| `CPU_ld_data_a5`        | Load data from memory carried from a4.                                        |
+| `CPU_result_a5`         | ALU result carried from a3.                                                   |
+| `CPU_valid_a5`          | Ensures only valid instructions write to registers.                           |
+| `CPU_valid_load_a5`     | Indicates a valid load instruction result to be written to the register file. |
+| `CPU_valid_taken_br_a5` | Propagates branch-taken status for flushing or pipeline control.              |
+
+---
+
+## **Flow of Execution in a5 (in short)**
+
+1. **Register Write-Back:**
+
+   * If `CPU_rf_wr_en_a5` is high, write `CPU_rf_wr_data_a5` into the register file at `CPU_rf_wr_index_a5`.
+   * `CPU_rf_wr_data_a5` comes from either:
+
+     * ALU result (`CPU_result_a5`) for arithmetic/logic instructions.
+     * Memory load (`CPU_ld_data_a5`) for load instructions.
+
+2. **Branch/Jump Completion:**
+
+   * Any branch or jump taken signal (`CPU_valid_taken_br_a5`) is finalized to control PC updates or pipeline flushes.
+
+3. **Instruction Validity Check:**
+
+   * `CPU_valid_a5` ensures only valid instructions affect the register file.
+
+---
+
+👉 In short: **a5 finalizes instruction execution by writing results to the register file and confirming branch/jump status.**
+
+---
+
+If you want, I can now **make a single table or diagram for a0–a5 with purpose, LHS variables, and flow** so your GitHub repo can have a complete, neat execution summary. Do you want me to do that?
