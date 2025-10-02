@@ -608,6 +608,8 @@ The execution of the hardcoded program can be clearly understood by correlating 
     * **Behavior**: The final instruction in the program is an unconditional branch that forces the processor to restart its main calculation, creating an infinite loop.
     * **Waveform Observation**: This is the largest jump visible. You'll see the **`CPU_pc_a0`** increment to the end of the program (e.g., address `48`) and then, on the next cycle, it will jump all the way back to the start of the calculation at address **`16`** by a subtraction of 32. This shows the entire program repeating itself from the 4th instruction, as intended.
 
+### 4. Synthesis
+
 
 
 
