@@ -54,7 +54,7 @@ Using the following commands, we can create a Python virtual environment and con
 
 ```bash
 # Step 1: In ../VSDBabySoC directory create a new virtual environment and install sandpiper-saas
-python3 -m venv sp_env
+python3 -m venv my_env
 source my_env/bin/activate
 pip install pyyaml click sandpiper-saas
 
@@ -353,7 +353,7 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 * **Internal Structure** -
 
-  * **Pipelined Signals**: The signal names follow a pattern. The `_a0` through `_a5` suffix indicates the pipeline stage the signal belongs to, representing a 5-stage pipeline (Fetch, Decode, Execute(ALU), Memory(load/store), Writeback).
+  * **Pipelined Signals**: The signal names follow a pattern. The `_a0` through `_a5` suffix indicates the pipeline stage the signal belongs to, representing a 6-stage pipeline (Fetch, Decode, Register Read, Execute(ALU), Memory(load/store), Writeback).
   * **Instruction Memory (`instrs` array)**: This is a **hardcoded ROM** inside the processor. It contains a fixed 13-instruction program that the CPU will execute. This means the CPU isn't fetching code from the outside world; it runs this specific program every time the system is turned on.
   * **Register File (`CPU_Xreg_value_a*`)**: This represents the 32 general-purpose 32-bit registers (x0-x31) of the RISC-V architecture.
   * **Data Memory (`CPU_Dmem_value_a*`)**: A small internal RAM for the processor to use for load and store operations.
@@ -591,6 +591,10 @@ Got it. You want a section that combines the description of the program's execut
 ---
 ### **Instruction Execution and Waveform Analysis**
 
+<p align = "center">
+    <img width="1599" height="826" alt="image" src="https://github.com/user-attachments/assets/12a2a53a-b56b-450e-95d0-b00e1f9644a0" />
+</p>
+
 The execution of the hardcoded program can be clearly understood by correlating the program's logic with the signals observed in the GTKWave simulation. The following points describe the key phases of the program's execution and their visual representation in the waveform.
 
 1.  **Processor Start-up (Reset)**
@@ -614,7 +618,7 @@ The execution of the hardcoded program can be clearly understood by correlating 
 
 4.  **Final Result Calculation (Addition loop)**
     * **Behavior**: Before the loops start, the final result of `0` is stored in register `x17`. And the value of the x17 register increases as it enters the first loop which goes till `x11` reaches value of 43.
-    * **Waveform Observation**: The **`OUT`** signal, which is connected to `x17` is 0 in the writeback stage of the 5th instruction which is the 5+(6-1) = 10 cycles. Further we can observe in the waveform that the `OUT` signal is incremented every 6 cycles this happens because when the branch instruction is executed in the previous stages the next instructions have already entered the pipeline. So the updated `PC` target enters the instruction fetch `a0` stage so for every increment of the `OUT` variable (write back) it takes 6 cycles. The `PC` when the branch stage is executed is `24` which -8 is 16 which is why when write back stage happens the PC changes from 32 to 16.
+    * **Waveform Observation**: The **`OUT`** signal, which is connected to `x17` is 0 in the writeback stage of the 5th instruction which is the 5+(6-1) = 10 cycles. Further we can observe in the waveform that the `OUT` signal is incremented every 6 cycles this happens because when the branch instruction is executed in the previous stages the next instructions have already entered the pipeline. So the updated `PC` target enters the instruction fetch `a0` stage so for every increment of the `OUT` variable (write back) it takes 6 cycles. When the bne instruction (at PC=24) is executed in stage a3, the CPU_taken_br_a3 signal is asserted. This immediately instructs the fetch stage to update its PC on the next clock edge. We can observe the CPU_pc_a0 value jumping from its speculative value of 36 down to the branch target of 16, flushing the intermediate instructions.
       
 5.  **Program Repetition (The Outer Loop)**
     * **Behavior**: The final instruction in the program is an unconditional branch that forces the processor to restart its main calculation, creating an infinite loop.
