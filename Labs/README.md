@@ -598,18 +598,37 @@ The execution of the hardcoded program can be clearly understood by correlating 
     * **Waveform Observation**: You can see the `reset` signal high for the first clock cycle, during which the Program Counter, **`CPU_pc_a0`**, is forced to `0`. On the next clock edge, as `reset` is still high, the processor begins fetching the first instruction from address `0` but the `PC` doesnt get updated. As the instruction at addr `0` is a immediate type instruction the `ADDI x9,x0,1` which is why in the second clock cycle we can observe that the `CPU_is_i_instr_a1` is high.
 
 2.  **Instruction Pipelining**
-    * **Behavior**: Each instruction travels through the five pipeline stages, with a new instruction entering the pipeline on every clock cycle.
-    * **Waveform Observation**: When the reset goes low that is when we can see that the `CPU_pc_a0` stars to increment by 4. This is visualized by adding the PC signals from each stage: **`CPU_pc_a0`**, **`CPU_pc_a1`**, **`CPU_pc_a2`**, and **`CPU_pc_a3`**. We can see an address appear in `CPU_pc_a0` and then watch it propagate to the subsequent signals, one cycle at a time. As the first 4 instructions are immediate type the `CPU_is_i_instr_a1` is high in the first 
+    * **Behavior**: Each instruction travels through the 6 pipeline stages, with a new instruction entering the pipeline on every clock cycle.
+    * **Waveform Observation**: When the reset goes low that is when we can see that the `CPU_pc_a0` stars to increment by 4. This is visualized from the PC signals in each stage: **`CPU_pc_a0`**, **`CPU_pc_a1`**, **`CPU_pc_a2`**, and **`CPU_pc_a3`**. We can see an address appear in `CPU_pc_a0` and then watch it propagate to the subsequent signals, one cycle at a time. As the first 4 instructions are immediate type the `CPU_is_i_instr_a1` is high in the first few clock cycles.
+**The cycles stages (explaining the pipeline)**
+    * **1st clock cycle**: The first instruction is fetched.
+    * **2nd clock cycle**: The second instruction is fetched. The 1st instruction is decoded.
+    * **3rd clock cycle**: The third instruction is fetched. The 2nd instruction is decoded. The first instruction reads the required registers.
+    * **4th clock cycle**: The fourth instruction is fetched. The 3rd instruction is decoded. The second instruction reads the required registers. The first instruction is executed.
+    * **5th clock cycle**: The fifth instruction is fetched. The 4th instruction is decoded. The third instruction reads the required registers. The second instruction is executed. The first instruction enter the memory cycle where it sits idle as the enable is low for reading.
+    * **6th clock cycle**: The sixth instruction is fetched. The 5th instruction is decoded. The 4th instruction reads the required registers. The third instruction is executed. The second instruction enter the memory cycle where it sits idle as the enable is low for reading. The first instruction checks for any writeback into the registers `x9`. Here as the fifth instruction is a R-type instruction thus the `CPU_is_r_instr_a1` which goes high as the second instruction is decoded.
 
 3.  **Calculation Loops (Backwards Branching)**
     * **Behavior**: The program contains two "inner" loops that use `bne` instructions to perform repetitive addition and subtraction. These instructions jump backwards to a previous address.
-    * **Waveform Observation**: This is seen as a sudden **decrease** in the PC value. For example, you will see **`CPU_pc_a0`** incrementing sequentially (`16`, `20`, `24`) and then, after the `bne` is executed, it will suddenly jump back down to `16`. This jump happens one cycle after the **`CPU_taken_br_a3`** signal goes high.
+    * **Waveform Observation**: This is seen as a sudden **decrease** in the PC value. For example, you will see **`CPU_pc_a0`** incrementing sequentially (`16`, `20`, `24`) and then, after the `bne` is executed, it will suddenly jump back down to `16`. This jump happens one cycle after the **`CPU_taken_br_a3`** signal goes high. We can also observe that the number of cycles between the decode stage (`CPU_is_b_instr_a1` is high) and the execution stage (`CPU_taken_br_a3` is high) is 2 cycles with the register read cycle in between. 
 
-4.  **Final Result Calculation**
-    * **Behavior**: After the loops complete, the final result of `0` is stored in register `x17`.
-    * **Waveform Observation**: The **`OUT`** signal, which is connected to `x17`, will show various intermediate values during the loops. Towards the end of the program, you will see it settle to a stable value of **0**.
-
+4.  **Final Result Calculation (Addition loop)**
+    * **Behavior**: Before the loops start, the final result of `0` is stored in register `x17`. And the value of the x17 register increases as it enters the first loop which goes till `x11` reaches value of 43.
+    * **Waveform Observation**: The **`OUT`** signal, which is connected to `x17` is 0 in the writeback stage of the 5th instruction which is the 5+(6-1) = 10 cycles. Further we can observe in the waveform that the `OUT` signal is incremented every 6 cycles this happens because when the branch instruction is executed in the previous stages the next instructions have already entered the pipeline. So the updated `PC` target enters the instruction fetch `a0` stage so for every increment of the `OUT` variable (write back) it takes 6 cycles. The `PC` when the branch stage is executed is `24` which -8 is 16 which is why when write back stage happens the PC changes from 32 to 16.
+      
 5.  **Program Repetition (The Outer Loop)**
     * **Behavior**: The final instruction in the program is an unconditional branch that forces the processor to restart its main calculation, creating an infinite loop.
-    * **Waveform Observation**: This is the largest jump visible. You'll see the **`CPU_pc_a0`** increment to the end of the program (e.g., address `48`) and then, on the next cycle, it will jump all the way back to the start of the calculation at address **`16`**. This shows the entire program repeating itself, as intended.
+    * **Waveform Observation**: This is the largest jump visible. You'll see the **`CPU_pc_a0`** increment to the end of the program (e.g., address `48`) and then, on the next cycle, it will jump all the way back to the start of the calculation at address **`16`** by a subtraction of 32. This shows the entire program repeating itself from the 4th instruction, as intended.
+
+
+
+
+
+
+
+
+
+
+
+
 
