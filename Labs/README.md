@@ -10,8 +10,6 @@ To recap, functional modeling acts as a high-level design blueprint, describing 
 
 ## File structure:
 
-Here is the project structure with brief descriptions formatted as comments.
-
 ```
 VSDBabySoC/           # Project root directory
 ├── src/              # Main directory for all source code
@@ -332,10 +330,6 @@ This is the block diagram of `avsddac`:
 
 ---
 
-Perfect! Here’s the **complete `rvmyth` core description** written in the **same style and indentation** you used, starting from the top (architecture, ports, internal structure, hard-coded instructions) and including **a0 and a1 stages**.
-
----
-
 ### iii. **`rvmyth` core:**
 
 This is a basic architecture of the RISC-V core: <img width="892" height="459" alt="image" src="https://github.com/user-attachments/assets/858c8868-208a-4d83-9eea-c9a9952a65a8" />
@@ -446,15 +440,13 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 > **a1 stage decodes the instruction, identifies the type, extracts immediate and register indices, and sets up control signals for ALU, branch, or memory operations in later stages.**
 
-Great — let’s move on to **stage `a2` (Register Read & Target Calculation)** in `rvmyth`, again focusing on the **LHS variables**.
-
 ---
 
 #### **Stage a2 – Register Read / Target Calculation**
 
 **Purpose:** Read source register values, compute branch/jump targets, and prepare operands for ALU.
 
-| LHS Variable         | What It Does / Represents                                                           |
+| Variables         | What It Does / Represents                                                           |
 | -------------------- | ----------------------------------------------------------------------------------- |
 | `CPU_src1_value_a2`  | Value read from source register **rs1**.                                            |
 | `CPU_src2_value_a2`  | Value read from source register **rs2**.                                            |
@@ -479,22 +471,20 @@ Great — let’s move on to **stage `a2` (Register Read & Target Calculation)**
 
 > **a2 stage reads the register file, prepares ALU operands, and computes possible branch/jump targets. It sets up everything needed for execution in `a3`.**
 
-Got it 👍 — you want **a3 explained in the same concise “LHS variable → action” style** like I gave you for **a2**. Here’s the breakdown for **a3**:
-
 ---
 
 #### **Stage a3 – Execute (ALU)**
 
 **Purpose:** At **a3**, the instruction is **executed**. The ALU performs arithmetic/logic/shift/comparison, branch and jump conditions are resolved, and control/data signals are prepared for register file write-back. This stage decides the actual result of the instruction.
 
-| LHS Variable        | Function                                                                                   |
+| Variables               | What It Does / Represents                                                                      |
 | ----------------------- | ---------------------------------------------------------------------------------------------- |
 | `CPU_result_a3`         | ALU result (ADD, SUB, AND, OR, XOR, shifts, comparisons, LUI, AUIPC, JAL, load/store address). |
 | `CPU_sltu_result_a3`    | Unsigned comparison between `src1` and `src2`.                                                 |
 | `CPU_sltiu_result_a3`   | Unsigned comparison between `src1` and immediate.                                              |
 | `CPU_rf_wr_en_a3`       | Enables register write if valid instruction with rd ≠ 0 (or load coming from a5).              |
 | `CPU_rf_wr_index_a3`    | Destination register index for write-back (rd).                                                |
-| `CPU_rf_wr_data_a3`     | Data to write back → ALU result or load result based on validity                                                |
+| `CPU_rf_wr_data_a3`     | Data to write back → ALU result or load result based on validity                               |
 | `CPU_taken_br_a3`       | Branch decision flag (BEQ, BNE, BLT, etc.).                                                    |
 | `CPU_valid_taken_br_a3` | If branch is valid and taken, flush younger pipeline instructions and updating PC.                             |
 | `CPU_valid_load_a3`     | Marks a valid load instruction.                                                                |
@@ -525,7 +515,7 @@ Got it 👍 — you want **a3 explained in the same concise “LHS variable → 
 #### **Stage a4 – Memory access**
 **Purpose:** For **load instructions**, data is read from memory. For **store instructions**, data is written to memory. This stage computes memory addresses using the ALU result from **a3** and handles memory read/write enable signals.
 
-| **LHS Variable**          | **Function**                                                                |
+| Variables      | What It Does / Represents                                                              |
 | ------------------------- | --------------------------------------------------------------------------- |
 | `CPU_dmem_rd_en_a4`       | Enables memory read for valid load instructions.                            |
 | `CPU_dmem_wr_en_a4`       | Enables memory write for valid store instructions.                          |
@@ -558,15 +548,11 @@ Got it 👍 — you want **a3 explained in the same concise “LHS variable → 
 👉 In short: **a4 handles memory read/write, computing addresses and preparing data for write-back in a5.**
 
 ---
-
-Of course. Here is the corrected and detailed breakdown for the **`a5` Write-back stage** in the same format as your document.
-
----
 #### **Stage a5 – Write-back (WB)**
 
 **Purpose:** The final stage of the pipeline. Its purpose is to write the instruction's result—either from the ALU or from memory—back into the destination register in the Register File. This step completes the instruction's execution.
 
-| LHS Variable | Function |
+| Variables | What It Does / Represents |
 | :--- | :--- |
 | `CPU_ld_data_a5` | Data read from memory, arriving from the MEM stage (`a4`). |
 | `OUT` | The module's 10-bit output, assigned the value of register `x17` in this stage. |
@@ -585,8 +571,6 @@ Of course. Here is the corrected and detailed breakdown for the **`a5` Write-bac
 ---
 💡 **In short:**
 > a5 finalizes the instruction by writing the correct result (either from the ALU or from memory) into the destination register.
-
-Got it. You want a section that combines the description of the program's execution with the specific observations from the waveform, suitable for your documentation. Here is a rewritten section with a new heading.
 
 ---
 ### **Instruction Execution and Waveform Analysis**
