@@ -610,6 +610,47 @@ The execution of the hardcoded program can be clearly understood by correlating 
 
 ### 4. Synthesis
 
+The synthesis process converts the high-level Register Transfer Level (RTL) description of the SoC into a gate-level netlist, mapping the design to the physical standard cells of the SKY130 technology library. This is performed using the open-source synthesis tool, **Yosys**.
+
+The complete set of commands for this process is defined in the synthesis script located at: `../src/script/yosys.ys`.
+
+The script performs the following key steps:
+
+1.  **Reads the design files**, including the top-level `vsdbabysoc.v`, the CPU core `rvmyth.v`, and other modules.
+2.  **Loads the standard cell libraries** (`.lib` files) which contain the definitions and timing information for basic logic gates (like AND, OR, D-flip-flops), the PLL, and the DAC.
+3.  **Synthesizes the design** using the `synth` command, which performs high-level optimizations.
+4.  **Maps flip-flops and optimizes** the logic using the `dfflibmap`, `opt`, and `abc` commands.
+5.  **Cleans up the netlist** and writes the final synthesized Verilog file to `../output/synth/vsdbabysoc.synth.v`.
+
+The specific sequence of commands used in the script is as follows:
+
+```tcl
+# Read Verilog and Liberty files
+read_verilog ./module/vsdbabysoc.v
+read_verilog -I./include ../output/compiled_tlv/rvmyth.v
+read_verilog -I./include ./module/clk_gate.v
+read_liberty -lib ./lib/avsdpll.lib
+read_liberty -lib ./lib/avsddac.lib
+read_liberty -lib ./lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+# Synthesize the top-level module
+synth -top vsdbabysoc
+
+# Map flip-flops and perform optimizations
+dfflibmap -liberty ./lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+opt
+abc -liberty ./lib/sky130_fd_sc_hd__tt_025C_1v80.lib -script +strash;scorr;ifraig;retime;{D};strash;dch,-f;map,-M,1,{D}
+
+# Clean up and finalize the netlist
+flatten
+setundef -zero
+clean -purge
+rename -enumerate
+
+# Generate statistics and write the output Verilog
+stat
+write_verilog -noattr ../output/vsdbabysoc_netlist.v
+```
 
 
 
