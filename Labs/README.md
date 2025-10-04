@@ -41,7 +41,8 @@ sudo apt update
 sudo apt install python3-venv python3-pip
 ```
 
-...the image for the cd VSDBabySoC
+<img width="1081" height="795" alt="clone_VSDBabysoc" src="https://github.com/user-attachments/assets/85542b6f-fe86-4e7e-8917-05e13dc3f798" />
+
 
 ### 2. Converting the .tlv file to .v
 
