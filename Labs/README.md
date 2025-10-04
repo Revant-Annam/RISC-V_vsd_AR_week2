@@ -366,19 +366,36 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 * **Instructions which are hard-coded in the ROM** -
 
   ```assembly
-  addi x9, x0, 1
-  addi x10, x0, 43
-  addi x11, x0, 0
-  addi x17, x0, 0
-  add  x17, x17, x11
-  addi x11, x11, 1
-  bne  x11, x10, -8
-  add  x17, x17, x11
-  sub  x17, x17, x11
-  sub  x11, x11, x9
-  bne  x11, x9, -8
-  sub  x17, x17, x11
-  beq  x0, x0, -32
+    # Initialization Block
+    addi x9, x0, 1        # Set register x9 = 1. This will be used as a constant value of 1.
+    addi x10, x0, 43       # Set register x10 = 43. This is the upper bound for the first loop.
+    addi x11, x0, 0        # Initialize register x11 = 0. This will be our loop counter.
+    addi x17, x0, 0        # Initialize register x17 = 0. This will be our accumulator.
+
+    # First Loop: Sums numbers from 0 to 42.
+    LOOP1_START:
+    add  x17, x17, x11    # Add the current counter value to the sum (x17 = x17 + x11).
+    addi x11, x11, 1       # Increment the counter (x11 = x11 + 1).
+    bne  x11, x10, -8     # Branch if Not Equal: If x11 != 43, jump back 2 instructions to LOOP1_START.
+
+    # After LOOP1, x11 is 43 and x17 is the sum of 0+1+...+42.
+
+    add  x17, x17, x11    # Add the final value of x11 (43) to the sum. x17 now holds the sum of 0..43.
+
+    # Second Loop: Decrements the counter and subtracts from the sum.
+    sub  x17, x17, x11    # Subtract the current counter (x17 = x17 - 43). This happens once before the loop.
+    LOOP2_START:
+    sub  x11, x11, x9     # Decrement the counter by 1 (x11 = x11 - 1).
+    bne  x11, x9, -8      # Branch if Not Equal: If x11 != 1, jump back 2 instructions to the instruction before LOOP2_START.
+    # This loop subtracts the values 42, 41, ..., 2 from x17.
+
+    # After LOOP2, x11 is 1 and x17 should also be 1.
+
+    sub  x17, x17, x11    # Subtract the final value of x11 (1) from x17. The final result in x17 is 0.
+
+    # Infinite Loop
+    beq  x0, x0, -32      # Branch if Equal: Since x0 always equals x0, this is an unconditional jump.
+                      # It jumps back 8 instructions to LOOP1_START, creating an infinite loop.
   ```
 
 * **Basic Functionality** -
@@ -793,6 +810,8 @@ To view the block diagram of the design we can use the same commands without usi
 
 <img width="1280" height="720" alt="Screenshot from 2025-10-03 05-07-02" src="https://github.com/user-attachments/assets/3afd2f50-e79f-4bed-87c3-5bc142f75e29" />
 
+
+### 5. Post synthesis simulation:
 
 
 
