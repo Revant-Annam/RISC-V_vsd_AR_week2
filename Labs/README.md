@@ -41,13 +41,15 @@ sudo apt update
 sudo apt install python3-venv python3-pip
 ```
 
-<img width="1081" height="795" alt="clone_VSDBabysoc" src="https://github.com/user-attachments/assets/85542b6f-fe86-4e7e-8917-05e13dc3f798" />
+<img width="1536" height="864" alt="Screenshot from 2025-09-29 03-26-28" src="https://github.com/user-attachments/assets/3283ca8a-afa1-42d5-bf20-035f3c9ba65e" />
 
 
 ### 2. Converting the .tlv file to .v
 
 If we don’t convert the `rvmyth.tlv` to `rvmyth.v`, we might encounter this error when we try to do the pre_synth_sim.
-...paste the image of the error.
+
+<img width="1536" height="864" alt="Screenshot from 2025-09-29 21-08-13" src="https://github.com/user-attachments/assets/1ffa23fc-73de-470d-8b9b-0ae4b75ccee4" />
+
 
 Using the following commands, we can create a Python virtual environment and convert the file with the help of `sandpiper-saas`. The `sandpiper-saas` must be installed in the virtual environment.
 
@@ -61,7 +63,8 @@ pip install pyyaml click sandpiper-saas
 sandpiper-saas -i ./src/module/*.tlv -o rvmyth.v --bestsv --noline -p verilog --outdir ./src/module/
 ```
 
-...screenshot for the conversion.
+<img width="1536" height="864" alt="Screenshot from 2025-09-29 21-16-40" src="https://github.com/user-attachments/assets/6aaa86aa-4916-4524-98e6-83952609e17b" />
+
 
 ### 3. Pre-synthesis simulation
 
@@ -99,6 +102,9 @@ Explanation of the command:
 * **`~/VLSI/VSDBabySoC/src/module/testbench.v`**
 
   * This is the **top-level Verilog file** for the compilation. The compiler starts with this file and automatically finds and compiles all the other modules that are instantiated within it (like `vsdbabysoc`, etc.).
+
+<img width="1536" height="864" alt="Screenshot from 2025-09-29 21-26-48" src="https://github.com/user-attachments/assets/f3d7e46b-af0e-4dba-b088-5a5fde3a3e5e" />
+
 
 > **Note:** If you find the Makefile in `../VSDBabySoC`, then you can directly use the commands below:
 >
@@ -194,7 +200,9 @@ This is the block diagram of `avsdpll` :
   * **Final State**: The `CLK` output will continue to run at a time period that is exactly **by 8** the frequency of the `REF` input. This means that the `CLK` will be running with a frequency of **8 times** that of the `REF` signal.
 
 * **Recieved Output** -
-    ...image of the waveform of the PLL output
+
+  <img width="1920" height="1080" alt="Screenshot from 2025-09-30 19-58-21" src="https://github.com/user-attachments/assets/440f01a5-cc03-4862-ae28-1590ad71865d" />
+
 
 * **Analyzing the recieved output** -
   * The initial output `CLK` is having a period of **25ns** then it instantly changes to **35.416ns** which is `REF/8.0`.
@@ -322,7 +330,9 @@ This is the block diagram of `avsddac`:
   * When the input `D` is halfway, for example **512** (`10'b1000000000`), the output `OUT` will be almost exactly in the middle of `VREFL` and `VREFH`.
 
 * **Recieved Output** -
-  ...recieved output for dac image
+  
+  <img width="1920" height="1080" alt="Screenshot from 2025-09-30 21-46-06" src="https://github.com/user-attachments/assets/a7d64527-dc0a-4f64-afd3-b04e52e0aad7" />
+
 
 * **Analysis of the recieved output** -
   * In the input `D` we can see that as time increases intially the output keeps increasing till it reaches a peak value of `946`. After reaching the peak value the input decreases steadily.
@@ -455,8 +465,6 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 | `CPU_jalr_tgt_pc_a2` | JALR target PC = (rs1 + immediate) with LSB cleared.                                |
 | `CPU_pc_a2`          | PC value carried forward for reference (from fetch).                                |
 
----
-
 **Flow in a2:**
 
 1. **Register File Read:** `CPU_src1_value_a2` and `CPU_src1_value_a2` ← results in `CPU_result_a3` previous value when `(CPU_rd_a3 == CPU_rs2_a2) && CPU_rf_wr_en_a3` is true else `XReg[CPU_rf_rd_index_1]` or `XReg[CPU_rf_rd_index_2]`.
@@ -465,8 +473,6 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
    * `CPU_br_tgt_pc_a2 = CPU_pc_a2 + immediate` (for B-type).
    * `CPU_jalr_tgt_pc_a2 = (CPU_src1_value_a2 + immediate) & ~1` (for JALR).
-
----
 
 💡 **In short:**
 
@@ -492,8 +498,6 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 | `CPU_valid_jump_a3`     | Marks a valid jump (JAL/JALR).                                                                 |
 | `CPU_valid_a3`          | Overall validity of this stage after considering branches/load.                                     |
 
----
-
 **Flow in a3**
 
 1. **Operands** (`src1`, `src2`, `imm`) arrive from decode (a2).
@@ -507,9 +511,8 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
    * `CPU_rf_wr_data_a3` (what value)
 8. **Validity finalized** (`CPU_valid_a3`) → ensures flushes/jumps/loads are handled cleanly.
 
----
-
-👉 In short: **a3 executes the instruction, resolves branches/jumps, and sets up the write-back path.**
+💡 **In short:** 
+> **a3 executes the instruction, resolves branches/jumps, and sets up the write-back path.**
 
 ---
 
@@ -527,8 +530,6 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 | `CPU_valid_load_a4`       | Indicates the instruction is a valid load.                                  |
 | `CPU_valid_a4`            | Ensures only valid instructions can write to memory.                        |
 
----
-
 **Flow in a4**
 
 1. **Memory Address Setup:** Compute memory address using ALU result: `CPU_dmem_addr_a4 = CPU_result_a4[5:2]`.
@@ -544,11 +545,11 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 5. **Pipeline Register Update:** Memory array `CPU_Dmem_value_a4` updates using either reset values, written data, or next-stage values.
 
+💡 **In short:**
+> **a4 handles memory read/write, computing addresses and preparing data for write-back in a5.**
+
 ---
 
-👉 In short: **a4 handles memory read/write, computing addresses and preparing data for write-back in a5.**
-
----
 #### **Stage a5 – Write-back (WB)**
 
 **Purpose:** The final stage of the pipeline. Its purpose is to write the instruction's result—either from the ALU or from memory—back into the destination register in the Register File. This step completes the instruction's execution.
@@ -558,7 +559,6 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 | `CPU_ld_data_a5` | Data read from memory, arriving from the MEM stage (`a4`). |
 | `OUT` | The module's 10-bit output, assigned the value of register `x17` in this stage. |
 
----
 **Flow in a5:**
 
 1.  **Result Selection:** The logic determines which data to write back.
@@ -569,11 +569,11 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
 
 3.  **Module Output Update:** In this specific design, the `OUT` port is continuously updated with the value held in register `x17` as it appears at the end of the pipeline.
 
----
 💡 **In short:**
 > a5 finalizes the instruction by writing the correct result (either from the ALU or from memory) into the destination register.
 
 ---
+
 ### **Instruction Execution and Waveform Analysis**
 
 <p align = "center">
@@ -609,6 +609,126 @@ The execution of the hardcoded program can be clearly understood by correlating 
     * **Behavior**: The final instruction in the program is an unconditional branch that forces the processor to restart its main calculation, creating an infinite loop.
     * **Waveform Observation**: This is the largest jump visible. You'll see the **`CPU_pc_a0`** increment to the end of the program (e.g., address `48`) and then, on the next cycle, it will jump all the way back to the start of the calculation at address **`16`** by a subtraction of 32. This shows the entire program repeating itself from the 4th instruction, as intended.
 
+### iv. **`vsdbabysoc` The SoC**
+This is the block diagram of `vsdbabysoc` :
+
+<img width="2270" height="1260" alt="image" src="https://github.com/user-attachments/assets/5b4307b0-a488-4a0c-a539-3c3583d26cd7" />
+
+
+* **Input and Output Ports** -
+
+    * **Input Ports**:
+        * `reset`: A signal to reset the processor to its initial state (e.g., setting the program counter to zero).
+        * `ENb_VCO`: This is the **VCO Enable** signal. When this signal is high (`1'b1`), the clock generation is enabled. When it's low, the output clock is forced to 0.
+        * `VCO_IN`, `ENb_CP`: These ports are included in the module definition but are **not used** in this simplified behavioral model. In a more complex model, they would be used to control the Voltage-Controlled Oscillator and Charge Pump.
+        * `REF`: This is the **Reference Clock** input. The model uses the rising edge of this signal to measure its period and adjust the output clock.
+        * `VREFH`: A `real` input that represents the **High Reference Voltage**. This defines the maximum output voltage of the DAC.
+
+    * **Output Ports**:
+        * `OUT`:  A `real` output that represents the resulting **analog voltage**.
+
+* **Internal Wires and Variables** - 
+
+    * `CLK`: This is the main **Clock Output**. It's the final, high-frequency clock signal generated by the PLL. This is given input to the `rvmyth`.
+    * `RV_TO_DAC`: This is the **10-bit digital input value**. This binary number (ranging from 0 to 1023) is what the module converts into an analog voltage. This is the output of the `rvmyth` given to the input of the DAC.
+
+* **Verilog Code** -
+    ```verilog
+    module vsdbabysoc (
+   output wire OUT,
+   //
+   input  wire reset,
+   //
+   input  wire VCO_IN,
+   input  wire ENb_CP,
+   input  wire ENb_VCO,
+   input  wire REF,
+   //
+   // input  wire VREFL,
+   input  wire VREFH
+    );
+
+   wire CLK;
+   wire [9:0] RV_TO_DAC;
+
+   rvmyth core (
+      .OUT(RV_TO_DAC),
+      .CLK(CLK),
+      .reset(reset)
+   );
+
+   avsdpll pll (
+      .CLK(CLK),
+      .VCO_IN(VCO_IN),
+      .ENb_CP(ENb_CP),
+      .ENb_VCO(ENb_VCO),
+      .REF(REF)
+   );
+
+   avsddac dac (
+      .OUT(OUT),
+      .D(RV_TO_DAC),
+      // .VREFL(VREFL),
+      .VREFH(VREFH)
+   );
+   
+    endmodule
+    ```
+
+* **Functionality** -
+    This module is a simple System-on-Chip (SoC). Its main function is to act as a **digitally controlled analog voltage generator**.
+
+ 1. `avsdpll` (Phase-Locked Loop) ⚙️
+This acts as the system's **clock generator**. It takes an external reference clock (`REF`) and other control signals to produce a stable, high-frequency internal clock signal (`CLK`) that drives the rest of the chip.
+
+2. `rvmyth` (RISC-V CPU Core) 🧠
+This is the **brain** of the SoC. It's a RISC-V processor that runs on the `CLK` generated by the PLL. It executes a program and, based on its internal logic, produces a 10-bit digital output value (`RV_TO_DAC`).
+
+3. `avsddac` (Digital-to-Analog Converter) 🎛️
+This is the **interface to the analog world**. It takes the 10-bit digital value (`RV_TO_DAC`) from the CPU core and converts it into a corresponding analog voltage level on the final `OUT` pin. The conversion is scaled between ground and the high reference voltage `VREFH`.
+
+In summary, the `rvmyth` processor decides what voltage level is needed, outputs a corresponding 10-bit digital code, and the `avsddac` converts that code into an actual analog voltage at the `OUT` pin. The entire system is synchronized by the `avsdpll` clock generator.
+
+* **Expected Output** -
+
+    The expected output of the `vsdbabysoc` module on the `OUT` pin is an **analog voltage**.
+
+    The specific voltage level or waveform of this output is not fixed; it is **dynamically controlled by the software program running on the `rvmyth` RISC-V processor core**.
+
+    1.  The `rvmyth` processor executes its code and produces a 10-bit digital value (`RV_TO_DAC`). This value can range from `0` (binary `0000000000`) to `1023` (binary `1111111111`).
+    2.  The `avsddac` (Digital-to-Analog Converter) takes this 10-bit number.
+    3.  It converts the number into an analog voltage, where the output voltage `OUT` is proportional to the digital input.
+
+    The relationship can be described by the formula:
+
+    $$V_{OUT} = VREFH \times \frac{D}{2^{10}}$$
+
+    Where:
+    * $V_{OUT}$ is the analog voltage on the `OUT` pin.
+    * $VREFH$ is the high reference voltage supplied to the chip.
+    * $D$ is the 10-bit decimal value of `RV_TO_DAC` (from 0 to 1023).
+
+* **Recieved Output** -
+
+  In the GTKWave viewer, right-click on the `OUT[9:0]` signal. From the context menu that appeared, navigate to `Data Format`, then to the `Analog` sub-menu, and finally select `Step`.
+
+  <img width="1920" height="1080" alt="Screenshot from 2025-10-04 16-19-01" src="https://github.com/user-attachments/assets/6afe0d6f-4b48-411b-bbd6-c3e5869cf05e" />
+
+
+  This is done to change the visual drawing style of the analog waveform for better analysis.
+
+  <img width="1920" height="1080" alt="Screenshot from 2025-10-04 16-22-44" src="https://github.com/user-attachments/assets/6107a2f2-8ece-43ea-86ce-de3ace828784" />
+  
+
+* **Analyzing the recieved output** -
+  1. **`reset`**: The simulation begins with `reset` held **high** for a few microseconds. This correctly initializes the system. Once `reset` goes **low**, the processor starts executing its program.
+  2. **`CLK`**: This is the main system clock, generated by the PLL. It appears to be a stable, periodic square wave.
+  3. **`RV_TO_DAC[9:0]`**: This is the 10-bit digital output from the RISC-V core. A repeating pattern of changing bits. This pattern represents the sequence of numbers the processor is sending to the DAC.
+  4. **`VREFH`**: This is the high reference voltage for the DAC. As expected, it is a **constant DC value**, represented by the flat line at the top.
+  5. **`OUT`** (Analog Output): This signal is an analog waveform that directly mirrors the digital pattern from `RV_TO_DAC`. It is a periodic periodic signal. 
+
+---
+
 ### 4. Synthesis
 
 The synthesis process converts the high-level Register Transfer Level (RTL) description of the SoC into a gate-level netlist, mapping the design to the physical standard cells of the SKY130 technology library. This is performed using the open-source synthesis tool, **Yosys**.
@@ -619,9 +739,23 @@ The script performs the following key steps:
 
 1.  **Reads the design files**, including the top-level `vsdbabysoc.v`, the CPU core `rvmyth.v`, and other modules.
 2.  **Loads the standard cell libraries** (`.lib` files) which contain the definitions and timing information for basic logic gates (like AND, OR, D-flip-flops), the PLL, and the DAC.
+   
+   <img width="1920" height="1080" alt="Screenshot from 2025-10-03 04-09-01" src="https://github.com/user-attachments/assets/29498512-f05d-47da-9ab2-475917584d76" />
+
+
 3.  **Synthesizes the design** using the `synth` command, which performs high-level optimizations.
+
+    <img width="1920" height="1080" alt="Screenshot from 2025-10-03 04-09-29" src="https://github.com/user-attachments/assets/35cc54f4-a773-4536-b49b-59e1e567fd8d" />
+
+   
 4.  **Maps flip-flops and optimizes** the logic using the `dfflibmap`, `opt`, and `abc` commands.
+   
+    <img width="1920" height="1080" alt="Screenshot from 2025-10-03 04-09-49" src="https://github.com/user-attachments/assets/cf073699-390b-4c51-be1d-d9406c9317c7" />
+
+    <img width="1920" height="1080" alt="Screenshot from 2025-10-03 04-10-27" src="https://github.com/user-attachments/assets/2a440783-d49d-4804-b021-b4fb612c75f2" />
+
 5.  **Cleans up the netlist** and writes the final synthesized Verilog file to `../output/synth/vsdbabysoc.synth.v`.
+6.  **Viewing the elements** using the `stat` command the internal components of the design can be viewed. 
 
 The specific sequence of commands used in the script is as follows:
 
@@ -650,13 +784,19 @@ rename -enumerate
 
 # Generate statistics and write the output Verilog
 stat
-write_verilog -noattr ../output/vsdbabysoc_netlist.v
+write_verilog -noattr ../output/vsdbabysoc.synth.v
 ```
 
+To view the block diagram of the design we can use the same commands without using the flatten.
+
+**The synthesized output for VSDBabySoC:**
+
+<img width="1280" height="720" alt="Screenshot from 2025-10-03 05-07-02" src="https://github.com/user-attachments/assets/3afd2f50-e79f-4bed-87c3-5bc142f75e29" />
 
 
 
 
+<img width="1920" height="1080" alt="Screenshot from 2025-10-04 17-47-00" src="https://github.com/user-attachments/assets/e11a878c-bfc8-45f2-9a43-e2fb17808a5f" />
 
 
 
