@@ -714,9 +714,9 @@ In summary, the `rvmyth` processor decides what voltage level is needed, outputs
     2.  The `avsddac` (Digital-to-Analog Converter) takes this 10-bit number.
     3.  It converts the number into an analog voltage, where the output voltage `OUT` is proportional to the digital input.
 
-    The relationship can be described by the formula:
+    The relationship can be described by the formula with VREFL = 0:
 
-    $$V_{OUT} = VREFH \times \frac{D}{2^{10}}$$
+    $$V_{OUT} = VREFH \times \frac{D}{2^{10} -1}$$
 
     Where:
     * $V_{OUT}$ is the analog voltage on the `OUT` pin.
@@ -903,8 +903,25 @@ Finally, use a waveform viewer like GTKWave to analyze the results of the simula
 
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/5a922412-a1f3-4ace-958a-6d3ac8c492a1" />
 
+---
 
+### 6\. Post-Synthesis Simulation Analysis
 
+The primary goals are to **verify that the design is still functionally correct** after being converted to a gate-level netlist.
+
+**Functional Correctness:** Upon visual inspection, the overall shape of the analog `OUT` signal and the sequence of values on the digital `RV_TO_DAC` bus are **identical** to those from the pre-synthesis simulation. The processor correctly executes its program, producing the expected ramping pattern of values. This confirms that the synthesis process performed by Yosys was successful and did not introduce any logical errors into the design. The functionality remains intact. ✅
+
+---
+
+## Summary
+
+This project documents the complete functional modeelling for a small System-on-Chip (SoC) named "VSDBabySoC". Starting with a **pre-synthesis (RTL) simulation** to verify the correct logical behavior of the SoC's core components—a PLL, a RISC-V CPU, and a DAC—under ideal conditions.
+
+Following this, the design was **synthesized** using Yosys, which translated the high-level Verilog code into a gate-level netlist using the SKY130 technology library.
+
+Finally, a **post-synthesis simulation** was performed on this new netlist. This crucial step confirmed the functionality of the SoC was perfectly preserved after synthesis.
+
+In essence, the project successfully demonstrates the standard workflow from initial functional verification to a synthesized, physically-aware design, validating its logic.
 
 
 
