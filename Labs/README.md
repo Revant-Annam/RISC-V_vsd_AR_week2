@@ -398,10 +398,8 @@ This is a basic architecture of the RISC-V core: <img width="892" height="459" a
                       # It jumps back 8 instructions to LOOP1_START, creating an infinite loop.
   ```
 
-* **Basic Functionality** -
+### **Basic Functionality** -
   The pipelining is done in an organized manner with `ai` where i is the stage of the instruction.
-
----
 
 #### **Stage a0 – Fetch Stage**
 
@@ -797,7 +795,6 @@ abc -liberty ./lib/sky130_fd_sc_hd__tt_025C_1v80.lib -script +strash;scorr;ifrai
 flatten
 setundef -zero
 clean -purge
-rename -enumerate
 
 # Generate statistics and write the output Verilog
 stat
@@ -833,8 +830,6 @@ Post-synthesis simulation is a vital checkpoint in the digital design workflow f
 | **Goal** | To verify the **functional correctness** of the design algorithm and logic. | To verify that the **synthesized logic is functionally correct** and to perform an **initial check for timing violations**. |
 | **Errors Detected** | Logic bugs, incorrect state machine behavior, and other functional errors in the original code. | Synthesis-induced functional errors, timing violations (setup/hold) if it is delay annotated, glitches, and race conditions. |
 | **Speed** | **Faster**, as it simulates a higher level of abstraction without timing details. | **Slower**, due to the increased complexity of the gate-level netlist and the need to account for timing delays. |
-
-Of course. Here are the commands for your post-synthesis simulation flow with explanations, updated with your username.
 
 #### **Steps for the post synthesis simulation**
 
